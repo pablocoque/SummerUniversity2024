@@ -28,6 +28,7 @@ __global__ void sum(float *d_data, float *d_sum) {
       temp[tidw] += temp[tidw + d];
     }
   }
+  if(tid == 0) atomicAdd(d_sum,temp[0]);
 }
 
 int main() {

@@ -17,12 +17,33 @@ double dot_host(const double *x, const double* y, int n) {
 template <int THREADS>
 __global__
 void dot_gpu_kernel(const double *x, const double* y, double *result, int n) {
+    __shared__ double buffer[THREADS];
+
+    auto i = threadIdx.x;
+    if(i<n){
+        buffer[i] = x[i] * y[i];
+    } else {
+	buffer[i] = 0;
+    }
+    int width = THREADS/2;
+
+    while(width){
+	    __syncthreads();
+        if(i<width)
+        	buffer[i] += buffer[i+width];
+        width /= 2;
+    }
+
+    if(!i)
+        *result = *buffer;
 }
+
+#define THREADS 128
 
 double dot_gpu(const double *x, const double* y, int n) {
     static double* result = malloc_managed<double>(1);
     // TODO call dot product kernel
-
+    dot_gpu_kernel<THREADS><<<(n-1)/THREADS+1,THREADS>>>(x,y,result,n);
     cudaDeviceSynchronize();
     return *result;
 }
